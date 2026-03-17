@@ -43,36 +43,6 @@ public struct TinyFileList: View {
                 if let url { state.selectFile(url) }
             }
         )) {
-            // Favorites section
-            if !favorites.folders.isEmpty {
-                Section("Favorites") {
-                    ForEach(favorites.folders, id: \.self) { folder in
-                        Button {
-                            state.setFolder(folder)
-                        } label: {
-                            HStack {
-                                Image(systemName: "folder.fill")
-                                    .frame(width: Self.iconWidth)
-                                    .foregroundStyle(.secondary)
-                                Text(folder.lastPathComponent)
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button("Reveal in Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([folder])
-                            }
-                            Divider()
-                            Button("Remove from Favorites") {
-                                favorites.remove(folder)
-                            }
-                        }
-                    }
-                }
-            }
-
             // Active folder contents
             if let folder = state.folderURL {
                 Section {
@@ -151,6 +121,55 @@ public struct TinyFileList: View {
                         .buttonStyle(.plain)
                     }
                 }
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !favorites.folders.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Favorites")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
+
+                    ForEach(favorites.folders, id: \.self) { folder in
+                        let isActive = state.folderURL?.standardizedFileURL == folder.standardizedFileURL
+                        Button {
+                            state.setFolder(folder)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "folder.fill")
+                                    .frame(width: Self.iconWidth)
+                                    .foregroundStyle(isActive ? .primary : .secondary)
+                                Text(folder.lastPathComponent)
+                                    .lineLimit(1)
+                                    .foregroundStyle(isActive ? .primary : .secondary)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
+                            .background(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 4)
+                        .contextMenu {
+                            Button("Reveal in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([folder])
+                            }
+                            Divider()
+                            Button("Remove from Favorites") {
+                                favorites.remove(folder)
+                            }
+                        }
+                    }
+
+                    Divider()
+                        .padding(.top, 4)
+                }
+                .background(.bar)
             }
         }
         .listStyle(.sidebar)
