@@ -73,48 +73,83 @@ public struct TinyFileList: View {
                 }
             }
 
-            // Current folder contents
-            if state.folderURL != nil {
-                ForEach(state.directories, id: \.self) { dir in
-                    Button {
-                        state.setFolder(dir, isRoot: false)
-                    } label: {
-                        HStack {
-                            Image(systemName: "folder")
-                                .frame(width: Self.iconWidth)
-                                .foregroundStyle(.secondary)
-                            Text(dir.lastPathComponent)
-                                .lineLimit(1)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Open in Sidebar") {
+            // Active folder contents
+            if let folder = state.folderURL {
+                Section {
+                    ForEach(state.directories, id: \.self) { dir in
+                        Button {
                             state.setFolder(dir, isRoot: false)
-                        }
-                        Divider()
-                        if favorites.contains(dir) {
-                            Button("Remove from Favorites") {
-                                favorites.remove(dir)
+                        } label: {
+                            HStack {
+                                Image(systemName: "folder")
+                                    .frame(width: Self.iconWidth)
+                                    .foregroundStyle(.secondary)
+                                Text(dir.lastPathComponent)
+                                    .lineLimit(1)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
                             }
-                        } else {
-                            Button("Add to Favorites") {
-                                favorites.add(dir)
-                            }
                         }
-                        Button("Reveal in Finder") {
-                            NSWorkspace.shared.activateFileViewerSelecting([dir])
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Open in Sidebar") {
+                                state.setFolder(dir, isRoot: false)
+                            }
+                            Divider()
+                            if favorites.contains(dir) {
+                                Button("Remove from Favorites") {
+                                    favorites.remove(dir)
+                                }
+                            } else {
+                                Button("Add to Favorites") {
+                                    favorites.add(dir)
+                                }
+                            }
+                            Button("Reveal in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([dir])
+                            }
                         }
                     }
-                }
 
-                ForEach(state.files, id: \.self) { file in
-                    fileRow(file)
-                        .tag(file)
+                    ForEach(state.files, id: \.self) { file in
+                        fileRow(file)
+                            .tag(file)
+                    }
+                } header: {
+                    HStack(spacing: 6) {
+                        Button {
+                            state.goUpDirectory()
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!state.canGoUp)
+                        .opacity(state.canGoUp ? 1 : 0.3)
+
+                        Text(folder.lastPathComponent)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Button {
+                            favorites.toggle(folder)
+                        } label: {
+                            Image(systemName: favorites.contains(folder) ? "star.fill" : "star")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            state.newFile()
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -147,51 +182,6 @@ public struct TinyFileList: View {
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .hidden()
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if let folder = state.folderURL {
-                HStack(spacing: 6) {
-                    Button {
-                        state.goUpDirectory()
-                    } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!state.canGoUp)
-                    .opacity(state.canGoUp ? 1 : 0.3)
-                    .help("Go to parent folder")
-
-                    Text(folder.lastPathComponent)
-                        .font(.system(size: 11, weight: .medium))
-                        .lineLimit(1)
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Button {
-                        favorites.toggle(folder)
-                    } label: {
-                        Image(systemName: favorites.contains(folder) ? "star.fill" : "star")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(favorites.contains(folder) ? "Remove from Favorites" : "Add to Favorites")
-
-                    Button {
-                        state.newFile()
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .help("New File")
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(.bar)
-            }
         }
         .overlay {
             if state.folderURL == nil {
