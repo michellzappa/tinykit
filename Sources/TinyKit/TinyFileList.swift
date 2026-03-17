@@ -5,6 +5,7 @@ public struct TinyFileList: View {
     @State private var renamingFile: URL?
     @State private var renameText = ""
     @State private var renameExtension = ""
+    @State private var fileToDelete: URL?
     private let favorites = FavoriteFolders.shared
 
     public init(state: FileState) {
@@ -197,10 +198,28 @@ public struct TinyFileList: View {
         })
         .background {
             Button("") {
-                if let file = state.selectedFile { state.deleteFile(file) }
+                if let file = state.selectedFile { fileToDelete = file }
             }
             .keyboardShortcut(.delete, modifiers: .command)
             .hidden()
+        }
+        .alert("Move to Trash?", isPresented: Binding(
+            get: { fileToDelete != nil },
+            set: { if !$0 { fileToDelete = nil } }
+        )) {
+            Button("Move to Trash", role: .destructive) {
+                if let file = fileToDelete {
+                    state.deleteFile(file)
+                    fileToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                fileToDelete = nil
+            }
+        } message: {
+            if let file = fileToDelete {
+                Text("\"\(file.lastPathComponent)\" will be moved to the Trash.")
+            }
         }
         .overlay {
             if state.folderURL == nil {
@@ -276,7 +295,7 @@ public struct TinyFileList: View {
                 }
                 Divider()
                 Button("Move to Trash", role: .destructive) {
-                    state.deleteFile(file)
+                    fileToDelete = file
                 }
             }
         }
