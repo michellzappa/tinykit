@@ -49,6 +49,7 @@ public struct TinyEditorView: NSViewRepresentable {
     @Binding var wordWrap: Bool
     @Binding var fontSize: Double
     @Binding var showLineNumbers: Bool
+    @Binding var jumpToRange: NSRange?
     var shouldHighlight: Bool
     var highlighterProvider: () -> any SyntaxHighlighting
     var commentStyle: CommentStyle
@@ -68,12 +69,14 @@ public struct TinyEditorView: NSViewRepresentable {
         smartPairs: [String: (String, String)]? = nil,
         fileDirectory: URL? = nil,
         scrollBridge: ScrollBridge = ScrollBridge(),
-        enableImageDrop: Bool = false
+        enableImageDrop: Bool = false,
+        jumpToRange: Binding<NSRange?> = .constant(nil)
     ) {
         self._text = text
         self._wordWrap = wordWrap
         self._fontSize = fontSize
         self._showLineNumbers = showLineNumbers
+        self._jumpToRange = jumpToRange
         self.shouldHighlight = shouldHighlight
         self.highlighterProvider = highlighterProvider
         self.commentStyle = commentStyle
@@ -207,6 +210,19 @@ public struct TinyEditorView: NSViewRepresentable {
         }
 
         configureWordWrap(textView: textView, scrollView: scrollView, enabled: wordWrap)
+
+        // Jump to range if requested
+        if let range = jumpToRange {
+            let len = (textView.string as NSString).length
+            let clampedLoc = min(range.location, len)
+            let clampedLen = min(range.length, len - clampedLoc)
+            let clamped = NSRange(location: clampedLoc, length: clampedLen)
+            textView.setSelectedRange(clamped)
+            textView.scrollRangeToVisible(clamped)
+            DispatchQueue.main.async {
+                self.jumpToRange = nil
+            }
+        }
     }
 
     private func configureWordWrap(textView: NSTextView, scrollView: NSScrollView, enabled: Bool) {

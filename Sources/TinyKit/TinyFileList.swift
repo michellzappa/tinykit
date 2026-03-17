@@ -53,7 +53,7 @@ public struct TinyFileList: View {
                             HStack {
                                 Image(systemName: "folder.fill")
                                     .frame(width: Self.iconWidth)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.secondary)
                                 Text(folder.lastPathComponent)
                                     .lineLimit(1)
                                 Spacer()
@@ -174,7 +174,7 @@ public struct TinyFileList: View {
                     } label: {
                         Image(systemName: favorites.contains(folder) ? "star.fill" : "star")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(favorites.contains(folder) ? .orange : .secondary)
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
                     .help(favorites.contains(folder) ? "Remove from Favorites" : "Add to Favorites")
