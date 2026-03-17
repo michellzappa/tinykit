@@ -125,14 +125,14 @@ public struct TinyFileList: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if !favorites.folders.isEmpty {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Favorites")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
                         .textCase(.uppercase)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 20)
                         .padding(.top, 8)
-                        .padding(.bottom, 4)
+                        .padding(.bottom, 2)
 
                     ForEach(favorites.folders, id: \.self) { folder in
                         let isActive = state.folderURL?.standardizedFileURL == folder.standardizedFileURL
@@ -148,13 +148,13 @@ public struct TinyFileList: View {
                                     .foregroundStyle(isActive ? .primary : .secondary)
                                 Spacer()
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 4)
+                            .frame(height: 24)
+                            .padding(.horizontal, 12)
                             .background(isActive ? Color.accentColor.opacity(0.15) : Color.clear)
-                            .cornerRadius(6)
+                            .cornerRadius(5)
                         }
                         .buttonStyle(.plain)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, 8)
                         .contextMenu {
                             Button("Reveal in Finder") {
                                 NSWorkspace.shared.activateFileViewerSelecting([folder])
@@ -167,7 +167,7 @@ public struct TinyFileList: View {
                     }
 
                     Divider()
-                        .padding(.top, 4)
+                        .padding(.top, 6)
                 }
                 .background(.bar)
             }
