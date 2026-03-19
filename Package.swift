@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "TinyKit", targets: ["TinyKit"]),
     ],
     dependencies: [
-        .package(path: "../../../Packages/TinyWelcome"),
+        .package(path: "../TinyWelcome"),
     ],
     targets: [
         .target(name: "TinyKit", dependencies: ["TinyWelcome"], swiftSettings: [.swiftLanguageMode(.v5)]),
