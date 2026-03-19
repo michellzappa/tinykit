@@ -57,6 +57,7 @@ public struct TinyEditorView: NSViewRepresentable {
     var fileDirectory: URL?
     var scrollBridge: ScrollBridge
     var enableImageDrop: Bool
+    var editorBridge: EditorBridge?
 
     public init(
         text: Binding<String>,
@@ -70,7 +71,8 @@ public struct TinyEditorView: NSViewRepresentable {
         fileDirectory: URL? = nil,
         scrollBridge: ScrollBridge = ScrollBridge(),
         enableImageDrop: Bool = false,
-        jumpToRange: Binding<NSRange?> = .constant(nil)
+        jumpToRange: Binding<NSRange?> = .constant(nil),
+        editorBridge: EditorBridge? = nil
     ) {
         self._text = text
         self._wordWrap = wordWrap
@@ -84,6 +86,7 @@ public struct TinyEditorView: NSViewRepresentable {
         self.fileDirectory = fileDirectory
         self.scrollBridge = scrollBridge
         self.enableImageDrop = enableImageDrop
+        self.editorBridge = editorBridge
     }
 
     public static let defaultSmartPairs: [String: (String, String)] = [
@@ -151,6 +154,7 @@ public struct TinyEditorView: NSViewRepresentable {
 
         context.coordinator.textView = textView
         context.coordinator.scrollView = scrollView
+        editorBridge?.textView = textView
         context.coordinator.gutter = gutter
         context.coordinator.shouldHighlight = shouldHighlight
         context.coordinator.highlighter.baseFont = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
@@ -468,8 +472,8 @@ public final class TinyTextView: NSTextView {
         if flags == .command && chars == "i" {
             wrapSelection(prefix: "_", suffix: "_"); return
         }
-        // Cmd+K → link
-        if flags == .command && chars == "k" {
+        // Cmd+Shift+L → link (was Cmd+K, now used for AI)
+        if flags == [.command, .shift] && chars == "l" {
             insertLink(); return
         }
         // Cmd+Shift+K → inline code

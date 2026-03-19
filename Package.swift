@@ -1,13 +1,16 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "TinyKit",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v26)],
     products: [
         .library(name: "TinyKit", targets: ["TinyKit"]),
     ],
+    dependencies: [
+        .package(path: "../../../Packages/TinyWelcome"),
+    ],
     targets: [
-        .target(name: "TinyKit"),
+        .target(name: "TinyKit", dependencies: ["TinyWelcome"], swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
 )
