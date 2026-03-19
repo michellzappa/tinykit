@@ -7,10 +7,7 @@ let package = Package(
     products: [
         .library(name: "TinyKit", targets: ["TinyKit"]),
     ],
-    dependencies: [
-        .package(path: "../TinyWelcome"),
-    ],
     targets: [
-        .target(name: "TinyKit", dependencies: ["TinyWelcome"], swiftSettings: [.swiftLanguageMode(.v5)]),
+        .target(name: "TinyKit", swiftSettings: [.swiftLanguageMode(.v5)]),
     ]
 )

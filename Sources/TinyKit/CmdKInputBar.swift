@@ -6,6 +6,7 @@ public struct CmdKInputBar: View {
     var onSubmit: () -> Void
 
     @FocusState private var isFocused: Bool
+    @State private var speechRecognizer = SpeechRecognizer()
 
     public init(aiState: AIState, folderContext: FolderContextState? = nil, onSubmit: @escaping () -> Void) {
         self.aiState = aiState
@@ -75,6 +76,10 @@ public struct CmdKInputBar: View {
                         .onChange(of: aiState.prompt) { _, newValue in
                             folderContext?.updatePromptTokens(for: newValue)
                         }
+                        .onKeyPress(.tab) {
+                            aiState.mode = aiState.mode == .edit ? .ask : .edit
+                            return .handled
+                        }
 
                     if aiState.phase == .streaming {
                         ProgressView()
@@ -83,6 +88,7 @@ public struct CmdKInputBar: View {
                             .buttonStyle(.plain)
                             .foregroundStyle(.red)
                     } else {
+                        micButton
                         Button {
                             onSubmit()
                         } label: {
@@ -103,10 +109,29 @@ public struct CmdKInputBar: View {
                         .padding(.horizontal, 12)
                         .padding(.bottom, 6)
                 }
+
+                if let ctx = folderContext, !ctx.files.isEmpty {
+                    contextBar(ctx)
+                }
             }
         }
         .onAppear { isFocused = true }
-        .onExitCommand { aiState.cancel() }
+        .onDisappear { speechRecognizer.stopListening() }
+        .onExitCommand { speechRecognizer.stopListening(); aiState.cancel() }
+    }
+
+    private var micButton: some View {
+        Button {
+            speechRecognizer.toggleListening { transcript in
+                aiState.prompt = transcript
+            }
+        } label: {
+            Image(systemName: speechRecognizer.isListening ? "mic.fill" : "mic")
+                .font(.body)
+                .foregroundStyle(speechRecognizer.isListening ? .red : .secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Dictate (voice to text)")
     }
 
     private func folderButton(_ ctx: FolderContextState) -> some View {
@@ -131,6 +156,34 @@ public struct CmdKInputBar: View {
         }
         .buttonStyle(.plain)
         .help("Folder context (\(ctx.includedCount) files)")
+    }
+
+    private func contextBar(_ ctx: FolderContextState) -> some View {
+        let total = CGFloat(ctx.budgetTokens)
+        let used = CGFloat(ctx.totalUsedTokens)
+        let fraction = total > 0 ? min(used / total, 1.0) : 0
+
+        return HStack(spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.quaternary)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(fraction > 0.95 ? .red : fraction > 0.8 ? .orange : .blue)
+                        .frame(width: geo.size.width * fraction)
+                }
+                .frame(height: 4)
+                .frame(maxHeight: .infinity, alignment: .center)
+            }
+            .frame(height: 12)
+
+            Text("\(ctx.totalUsedTokens)/\(ctx.budgetTokens)")
+                .font(.system(size: 9).monospacedDigit())
+                .foregroundStyle(.tertiary)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
     }
 
     private var selectionPreview: some View {

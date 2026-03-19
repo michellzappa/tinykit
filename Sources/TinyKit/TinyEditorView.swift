@@ -57,6 +57,7 @@ public struct TinyEditorView: NSViewRepresentable {
     var fileDirectory: URL?
     var scrollBridge: ScrollBridge
     var enableImageDrop: Bool
+    var isEditable: Bool
     var editorBridge: EditorBridge?
 
     public init(
@@ -71,6 +72,7 @@ public struct TinyEditorView: NSViewRepresentable {
         fileDirectory: URL? = nil,
         scrollBridge: ScrollBridge = ScrollBridge(),
         enableImageDrop: Bool = false,
+        isEditable: Bool = true,
         jumpToRange: Binding<NSRange?> = .constant(nil),
         editorBridge: EditorBridge? = nil
     ) {
@@ -86,6 +88,7 @@ public struct TinyEditorView: NSViewRepresentable {
         self.fileDirectory = fileDirectory
         self.scrollBridge = scrollBridge
         self.enableImageDrop = enableImageDrop
+        self.isEditable = isEditable
         self.editorBridge = editorBridge
     }
 
@@ -106,7 +109,7 @@ public struct TinyEditorView: NSViewRepresentable {
         let scrollView = NSScrollView()
         let textView = TinyTextView()
 
-        textView.isEditable = true
+        textView.isEditable = isEditable
         textView.isSelectable = true
         textView.isRichText = false
         textView.allowsUndo = true

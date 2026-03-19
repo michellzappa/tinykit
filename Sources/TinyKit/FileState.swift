@@ -20,7 +20,7 @@ public struct TabItem: Identifiable, Equatable {
 // MARK: - FileState
 
 @Observable
-open class FileState {
+open class FileState: AutoSavable {
     public var folderURL: URL?
     /// The top-level folder the user opened — navigation is clamped to this.
     public var rootFolderURL: URL?
@@ -70,6 +70,16 @@ open class FileState {
         stopAllFileWatchers()
     }
 
+    // MARK: - Overridable hooks
+
+    /// Override to customize how file content is read (e.g. for binary formats like PDF).
+    open func readFileContent(from url: URL) -> String {
+        (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+    }
+
+    /// Override to disable auto-save (e.g. for read-only/binary source files).
+    open var shouldAutoSave: Bool { true }
+
     // MARK: - Tab management
 
     public func openInTab(_ url: URL) {
@@ -83,7 +93,7 @@ open class FileState {
         stashActiveTab()
 
         // Read file from disk
-        let fileContent = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        let fileContent = readFileContent(from: url)
         let tab = TabItem(id: url, content: fileContent, savedContent: fileContent)
         tabs.append(tab)
 
@@ -115,8 +125,8 @@ open class FileState {
     public func closeTab(_ url: URL) {
         guard let tabIndex = tabs.firstIndex(where: { $0.id == url }) else { return }
 
-        // Save if dirty
-        if tabs[tabIndex].isDirty {
+        // Save if dirty (skip for read-only sources)
+        if shouldAutoSave && tabs[tabIndex].isDirty {
             let tabContent = tabs[tabIndex].content
             try? tabContent.write(to: url, atomically: true, encoding: .utf8)
         }
@@ -150,6 +160,7 @@ open class FileState {
     }
 
     public func saveAllDirtyTabs() {
+        guard shouldAutoSave else { return }
         stashActiveTab()
         for tab in tabs where tab.isDirty {
             try? tab.content.write(to: tab.id, atomically: true, encoding: .utf8)
@@ -191,7 +202,7 @@ open class FileState {
 
     private func scheduleAutoSave() {
         autoSaveTask?.cancel()
-        guard !isSwitchingTabs, selectedFile != nil else { return }
+        guard shouldAutoSave, !isSwitchingTabs, selectedFile != nil else { return }
         let task = DispatchWorkItem { [weak self] in
             guard let self, self.isDirty, let url = self.selectedFile else { return }
             self.writeFile(to: url)
@@ -232,6 +243,18 @@ open class FileState {
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         setFolder(url)
+    }
+
+    open func openFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = supportedExtensions.compactMap { UTType(filenameExtension: $0) }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let folder = url.deletingLastPathComponent()
+        setFolder(folder)
+        selectFile(url)
     }
 
     public func setFolder(_ url: URL, isRoot: Bool = true) {
@@ -286,7 +309,7 @@ open class FileState {
     }
 
     public func loadFile(_ url: URL) {
-        content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        content = readFileContent(from: url)
         savedContent = content
     }
 
@@ -480,7 +503,8 @@ open class FileState {
     }
 
     private func handleFileChanged(_ url: URL) {
-        guard let newContent = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let newContent = readFileContent(from: url)
+        guard !newContent.isEmpty else { return }
         guard let idx = tabs.firstIndex(where: { $0.id == url }) else { return }
 
         if tabs[idx].isDirty {
