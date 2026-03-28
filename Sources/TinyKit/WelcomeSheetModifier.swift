@@ -5,8 +5,8 @@ struct WelcomeSheetModifier: ViewModifier {
     let appName: String
     let subtitle: String
     let features: [(icon: String, title: String, description: String)]
-    let openButtonTitle: String
-    let onOpen: () -> Void
+    let onOpenFolder: () -> Void
+    let onOpenFile: (() -> Void)?
     let onDismiss: () -> Void
 
     func body(content: Content) -> some View {
@@ -16,11 +16,17 @@ struct WelcomeSheetModifier: ViewModifier {
                     appName: appName,
                     subtitle: subtitle,
                     features: features,
-                    openButtonTitle: openButtonTitle,
                     onOpenFolder: {
                         WelcomeState.markLaunched()
                         isPresented = false
-                        onOpen()
+                        onOpenFolder()
+                    },
+                    onOpenFile: onOpenFile.map { action in
+                        {
+                            WelcomeState.markLaunched()
+                            isPresented = false
+                            action()
+                        }
                     },
                     onDismiss: {
                         WelcomeState.markLaunched()
@@ -41,8 +47,8 @@ public extension View {
         appName: String,
         subtitle: String,
         features: [(icon: String, title: String, description: String)],
-        openButtonTitle: String = "Open a Folder",
-        onOpen: @escaping () -> Void,
+        onOpenFolder: @escaping () -> Void,
+        onOpenFile: (() -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) -> some View {
         modifier(WelcomeSheetModifier(
@@ -50,8 +56,8 @@ public extension View {
             appName: appName,
             subtitle: subtitle,
             features: features,
-            openButtonTitle: openButtonTitle,
-            onOpen: onOpen,
+            onOpenFolder: onOpenFolder,
+            onOpenFile: onOpenFile,
             onDismiss: onDismiss
         ))
     }

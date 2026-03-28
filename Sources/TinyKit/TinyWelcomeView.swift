@@ -4,23 +4,23 @@ public struct TinyWelcomeView: View {
     public let appName: String
     public let subtitle: String
     public let features: [(icon: String, title: String, description: String)]
-    public let openButtonTitle: String
     public let onOpenFolder: () -> Void
+    public let onOpenFile: (() -> Void)?
     public let onDismiss: () -> Void
 
     public init(
         appName: String,
         subtitle: String,
         features: [(icon: String, title: String, description: String)],
-        openButtonTitle: String = "Open a Folder",
         onOpenFolder: @escaping () -> Void,
+        onOpenFile: (() -> Void)? = nil,
         onDismiss: @escaping () -> Void
     ) {
         self.appName = appName
         self.subtitle = subtitle
         self.features = features
-        self.openButtonTitle = openButtonTitle
         self.onOpenFolder = onOpenFolder
+        self.onOpenFile = onOpenFile
         self.onDismiss = onDismiss
     }
 
@@ -68,11 +68,19 @@ public struct TinyWelcomeView: View {
 
             VStack(spacing: 10) {
                 Button(action: onOpenFolder) {
-                    Text(openButtonTitle)
+                    Text("Open Folder")
                         .frame(maxWidth: .infinity)
                 }
                 .keyboardShortcut(.defaultAction)
                 .controlSize(.large)
+
+                if let onOpenFile {
+                    Button(action: onOpenFile) {
+                        Text("Open File")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .controlSize(.large)
+                }
 
                 Button(action: onDismiss) {
                     Text("Start Empty")
@@ -85,7 +93,7 @@ public struct TinyWelcomeView: View {
             .padding(.horizontal, 60)
             .padding(.bottom, 28)
         }
-        .frame(width: 440, height: 480)
+        .frame(width: 440, height: 520)
     }
 }
 

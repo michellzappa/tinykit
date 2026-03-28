@@ -50,10 +50,9 @@ public final class FavoriteFolders {
             var isStale = false
             guard let url = try? URL(
                 resolvingBookmarkData: data,
-                options: .withSecurityScope,
+                options: [],
                 bookmarkDataIsStale: &isStale
             ) else { return nil }
-            _ = url.startAccessingSecurityScopedResource()
             return url
         }
     }
@@ -61,7 +60,7 @@ public final class FavoriteFolders {
     private func saveFolders() {
         let dataArray = folders.compactMap { url in
             try? url.bookmarkData(
-                options: .withSecurityScope,
+                options: [],
                 includingResourceValuesForKeys: nil,
                 relativeTo: nil
             )

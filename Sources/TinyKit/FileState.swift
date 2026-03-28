@@ -83,6 +83,10 @@ open class FileState: AutoSavable {
     // MARK: - Tab management
 
     public func openInTab(_ url: URL) {
+        // Never open directories as tabs
+        let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+        if isDir { return }
+
         // If already open, just switch to it
         if tabs.contains(where: { $0.id == url }) {
             switchToTab(url)
@@ -106,7 +110,16 @@ open class FileState: AutoSavable {
         content = fileContent
         savedContent = fileContent
         isSwitchingTabs = false
+
+        didOpenFile(url)
+        RecentFiles.shared.add(url)
     }
+
+    /// Called after a file is opened in a tab. Override to add post-open behavior (e.g., Spotlight indexing).
+    open func didOpenFile(_ url: URL) {}
+
+    /// Called after a file is written to disk. Override to add post-save behavior.
+    open func didSaveFile(_ url: URL) {}
 
     public func switchToTab(_ url: URL) {
         guard let tabIndex = tabs.firstIndex(where: { $0.id == url }) else { return }
@@ -216,8 +229,7 @@ open class FileState: AutoSavable {
     public func restoreLastFolder() {
         guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return }
         var isStale = false
-        guard let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, bookmarkDataIsStale: &isStale) else { return }
-        guard url.startAccessingSecurityScopedResource() else { return }
+        guard let url = try? URL(resolvingBookmarkData: data, options: [], bookmarkDataIsStale: &isStale) else { return }
         if isStale { saveBookmark(for: url) }
         folderURL = url
         rootFolderURL = url
@@ -229,7 +241,7 @@ open class FileState: AutoSavable {
     }
 
     private func saveBookmark(for url: URL) {
-        if let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) {
+        if let data = try? url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil) {
             UserDefaults.standard.set(data, forKey: bookmarkKey)
         }
     }
@@ -424,6 +436,7 @@ open class FileState: AutoSavable {
                 tabs[idx].savedContent = content
                 tabs[idx].hasExternalChange = false
             }
+            didSaveFile(url)
         } catch {
             // Write failed
         }
@@ -504,7 +517,6 @@ open class FileState: AutoSavable {
 
     private func handleFileChanged(_ url: URL) {
         let newContent = readFileContent(from: url)
-        guard !newContent.isEmpty else { return }
         guard let idx = tabs.firstIndex(where: { $0.id == url }) else { return }
 
         if tabs[idx].isDirty {

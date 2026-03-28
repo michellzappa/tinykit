@@ -24,6 +24,7 @@ public final class AIState {
     public init() {}
 
     public func activate(selection: String, range: NSRange, bridge: EditorBridge?, folderURL: URL? = nil, supportedExtensions: Set<String> = []) {
+        mode = bridge == nil ? .ask : .edit
         selectedText = selection
         selectedRange = range
         originalText = selection

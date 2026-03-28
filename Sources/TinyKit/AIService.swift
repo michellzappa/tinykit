@@ -7,6 +7,9 @@ public enum AIMode: String, CaseIterable, Identifiable, Sendable {
 }
 
 public enum AIService {
+    private static let maxDocumentTokens = 2_000
+    private static let maxFolderContextTokens = 1_200
+
     public struct Request: Sendable {
         public let prompt: String
         public let selectedText: String?
@@ -56,15 +59,7 @@ public enum AIService {
             instructions = "You are a helpful assistant. Answer the user's question concisely. If selected text is provided, use it as context. The file type is .\(ext)."
         }
 
-        var msg = ""
-        if let folder = request.folderContext, !folder.isEmpty {
-            msg += "Project files for context:\n\(folder)\n\n"
-        }
-        if let selected = request.selectedText, !selected.isEmpty {
-            msg += "Selected text:\n\(selected)\n\n"
-        }
-        msg += request.prompt
-        let userMessage = msg
+        let userMessage = composeUserMessage(for: request)
 
         return AsyncThrowingStream { continuation in
             let task = Task {
@@ -89,6 +84,39 @@ public enum AIService {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    private static func composeUserMessage(for request: Request) -> String {
+        var sections: [String] = []
+
+        if let folder = request.folderContext,
+           !folder.isEmpty {
+            sections.append("Project files for context:\n\(clipped(folder, maxTokens: maxFolderContextTokens))")
+        }
+
+        if let document = request.fullDocument,
+           !document.isEmpty {
+            let normalizedSelected = request.selectedText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let normalizedDocument = document.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalizedDocument != normalizedSelected {
+                sections.append("Full document:\n\(clipped(document, maxTokens: maxDocumentTokens))")
+            }
+        }
+
+        if let selected = request.selectedText,
+           !selected.isEmpty {
+            sections.append("Selected text:\n\(selected)")
+        }
+
+        sections.append("User request:\n\(request.prompt)")
+        return sections.joined(separator: "\n\n")
+    }
+
+    private static func clipped(_ text: String, maxTokens: Int) -> String {
+        guard tokenCount(for: text) > maxTokens else { return text }
+        let characterBudget = maxTokens * 4
+        let prefix = String(text.prefix(characterBudget))
+        return "\(prefix)\n\n[Truncated to fit the on-device context window]"
     }
 
     public enum AIError: LocalizedError {
