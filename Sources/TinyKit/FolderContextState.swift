@@ -1,5 +1,4 @@
 import Foundation
-import FoundationModels
 
 // MARK: - Folder Context File
 

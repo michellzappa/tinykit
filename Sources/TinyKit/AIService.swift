@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 public enum AIMode: String, CaseIterable, Identifiable, Sendable {
     case edit, ask
@@ -30,17 +32,20 @@ public enum AIService {
 
     /// Check whether the on-device model is ready.
     public static var isAvailable: Bool {
-        SystemLanguageModel.default.availability == .available
+        if #available(macOS 26.0, *) {
+            #if canImport(FoundationModels)
+            return SystemLanguageModel.default.availability == .available
+            #else
+            return false
+            #endif
+        }
+        return false
     }
 
     /// Total context window size in tokens.
-    /// Apple's on-device model has a 4,096 token context window.
-    /// TODO: Replace with SystemLanguageModel.default.contextSize when API is available.
     public static var contextSize: Int { 4096 }
 
     /// Estimate token count for a string.
-    /// Uses ~4 characters per token heuristic for English text.
-    /// TODO: Replace with SystemLanguageModel.default.tokenUsage(for:) when API is available.
     public static func tokenCount(for text: String) -> Int {
         max(1, text.utf8.count / 4)
     }
@@ -61,7 +66,21 @@ public enum AIService {
 
         let userMessage = composeUserMessage(for: request)
 
-        return AsyncThrowingStream { continuation in
+        if #available(macOS 26.0, *) {
+            #if canImport(FoundationModels)
+            return _streamWithFoundationModels(instructions: instructions, userMessage: userMessage)
+            #else
+            return AsyncThrowingStream { $0.finish(throwing: AIError.modelUnavailable) }
+            #endif
+        } else {
+            return AsyncThrowingStream { $0.finish(throwing: AIError.modelUnavailable) }
+        }
+    }
+
+    #if canImport(FoundationModels)
+    @available(macOS 26.0, *)
+    private static func _streamWithFoundationModels(instructions: String, userMessage: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let session = LanguageModelSession(instructions: instructions)
@@ -85,6 +104,7 @@ public enum AIService {
             continuation.onTermination = { _ in task.cancel() }
         }
     }
+    #endif
 
     private static func composeUserMessage(for request: Request) -> String {
         var sections: [String] = []
